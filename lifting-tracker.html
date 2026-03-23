@@ -511,7 +511,11 @@ function startWorkout(groupIds) {
   // Add starred exercises for each group
   groupIds.forEach(function(gid) {
     var starred = getStarredEx(gid);
-    if (starred.length === 0) starred = getExForGroup(gid).slice(0,2);
+    var g = getGroupById(gid);
+    if (starred.length === 0) {
+      // Subgroups: load all exercises (user curated them). Top-level: limit to first 2.
+      starred = (g && g.parentId) ? getExForGroup(gid) : getExForGroup(gid).slice(0,2);
+    }
     starred.forEach(function(ex) {
       var last = getLastSessions(ex.id, 1, '9999-12-31');
       var defaultSets;
@@ -1027,19 +1031,29 @@ function getCutoffDate(period) {
 // ════════════════════════════════════════════════════════
 // SETTINGS PAGE
 // ════════════════════════════════════════════════════════
+var expandedSubgroups = {};
+function toggleSubgroup(gid) { expandedSubgroups[gid] = !expandedSubgroups[gid]; renderSettings(); }
+
 function renderSettingsGroup(g, isSub) {
   var exs = getExForGroup(g.id);
   var subs = getSubgroups(g.id);
   var cls = isSub ? 'settings-subgroup' : 'settings-group';
   var hdrCls = isSub ? 'sg-hdr sg-hdr-sub' : 'sg-hdr';
+  var isExpanded = isSub ? !!expandedSubgroups[g.id] : true;
   var h = '<div class="'+cls+'">';
-  h += '<div class="'+hdrCls+'"><span class="sg-name">'+g.name+' <span style="font-size:11px;color:var(--subtle);">('+exs.length+')</span></span>';
-  h += '<div style="display:flex;gap:8px;">';
+  h += '<div class="'+hdrCls+'"'+(isSub?' onclick="toggleSubgroup(\''+g.id+'\')" style="cursor:pointer;"':'')+'>';
+  if (isSub) {
+    h += '<span class="sg-name" style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;color:var(--subtle);transition:transform .15s;'+(isExpanded?'transform:rotate(90deg);':'')+'">▶</span>'+g.name+' <span style="font-size:11px;color:var(--subtle);">('+exs.length+')</span></span>';
+  } else {
+    h += '<span class="sg-name">'+g.name+' <span style="font-size:11px;color:var(--subtle);">('+exs.length+(subs.length>0?' + '+subs.length+' sub':'')+')</span></span>';
+  }
+  h += '<div style="display:flex;gap:8px;" onclick="event.stopPropagation();">';
   if (!isSub) h += '<button class="btn btn-sm btn-outline" style="font-size:11px;padding:6px 10px;min-height:32px;" onclick="addSubgroupModal(\''+g.id+'\')">+ Sub</button>';
   h += '<button class="btn btn-sm btn-outline" onclick="editGroupModal(\''+g.id+'\')">Edit</button>';
   h += '<button class="sg-ex-del" onclick="if(confirm(\'Delete '+g.name.replace(/'/g,"\\'")+(subs.length>0?' and its subgroups':'')+' and all exercises?\'))deleteGroup(\''+g.id+'\')">🗑</button>';
   h += '</div></div>';
-  if (subs.length === 0) {
+  // Show exercise body: always for groups without subs, or when a subgroup is expanded
+  if (subs.length === 0 || (isSub && isExpanded)) {
     h += '<div class="sg-body">';
     h += '<div class="sg-add"><input id="addEx_'+g.id+'" placeholder="Add exercise..." onkeydown="if(event.key===\'Enter\')addExercise(\''+g.id+'\')"><button class="btn btn-sm btn-primary" onclick="addExercise(\''+g.id+'\')">+</button></div>';
     exs.forEach(function(ex) {
