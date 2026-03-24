@@ -29,7 +29,7 @@
   --chart-dot-stroke: #ffffff;
 }
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); font-size:15px; line-height:1.4; min-height:100vh; padding-bottom:80px; -webkit-text-size-adjust:100%; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); font-size:15px; line-height:1.4; min-height:100vh; padding-bottom:68px; -webkit-text-size-adjust:100%; }
 button { font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; font-size:inherit; }
 input, select, textarea { font-family:inherit; font-size:16px; color:var(--text); background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; outline:none; }
 input:focus, select:focus, textarea:focus { border-color:var(--blue); }
@@ -38,19 +38,19 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 textarea { resize:vertical; min-height:60px; }
 
 /* ── HEADER ── */
-.app-hdr { background:var(--surface); padding:14px 16px 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+.app-hdr { background:var(--surface); padding:10px 16px 8px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
 .app-hdr h1 { font-size:18px; font-weight:800; letter-spacing:-0.3px; }
 .app-hdr h1 span { color:var(--blue); }
 .hdr-date { font-size:12px; color:var(--muted); }
 
 /* ── BOTTOM NAV ── */
 .bnav { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); display:flex; z-index:100; padding-bottom:env(safe-area-inset-bottom, 0); }
-.bnav button { flex:1; padding:10px 4px 8px; text-align:center; font-size:10px; font-weight:600; color:var(--subtle); letter-spacing:.3px; transition:color .15s; min-height:56px; }
+.bnav button { flex:1; padding:6px 4px 5px; text-align:center; font-size:10px; font-weight:600; color:var(--subtle); letter-spacing:.3px; transition:color .15s; min-height:48px; }
 .bnav button.active { color:var(--blue); }
-.bnav .nav-icon { display:block; font-size:22px; margin-bottom:2px; }
+.bnav .nav-icon { display:block; font-size:20px; margin-bottom:1px; }
 
 /* ── PAGE CONTAINERS ── */
-.page { display:none; padding:16px; }
+.page { display:none; padding:12px; }
 .page.active { display:block; }
 
 /* ── CARDS ── */
@@ -58,45 +58,45 @@ textarea { resize:vertical; min-height:60px; }
 .card-title { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
 
 /* ── BUTTONS ── */
-.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:14px 20px; border-radius:var(--radius); font-weight:700; font-size:16px; transition:all .15s; min-height:48px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 16px; border-radius:var(--radius); font-weight:700; font-size:15px; transition:all .15s; min-height:42px; }
 .btn-primary { background:var(--blue); color:#fff; }
 .btn-primary:hover { background:#2563eb; }
 .btn-danger { background:var(--red); color:#fff; }
 .btn-outline { border:1px solid var(--border); color:var(--muted); }
 .btn-outline:hover { border-color:var(--blue); color:var(--blue); }
 .btn-outline.selected { border-color:var(--blue); background:var(--blue-dim); color:var(--text); }
-.btn-sm { padding:10px 14px; font-size:13px; border-radius:var(--radius-sm); min-height:40px; }
+.btn-sm { padding:7px 12px; font-size:13px; border-radius:var(--radius-sm); min-height:36px; }
 .btn-block { width:100%; }
 .btn-green { background:var(--green); color:#fff; }
 .btn-green:hover { background:#16a34a; }
 
 /* ── GROUP CHIPS ── */
-.chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
-.chip { padding:12px 18px; border-radius:20px; font-weight:600; font-size:15px; border:2px solid var(--border); color:var(--muted); transition:all .15s; min-height:44px; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.chip { padding:8px 14px; border-radius:20px; font-weight:600; font-size:14px; border:2px solid var(--border); color:var(--muted); transition:all .15s; min-height:38px; }
 .chip.selected { border-color:var(--blue); background:var(--blue-dim); color:var(--text); }
 .chip-group-label { width:100%; font-size:11px; font-weight:700; color:var(--subtle); text-transform:uppercase; letter-spacing:.5px; padding:4px 2px 2px; }
 .chip-group-label:first-child { padding-top:0; }
 
 /* ── EXERCISE LOG ── */
-.ex-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:12px; overflow:hidden; }
-.ex-hdr { display:flex; align-items:center; justify-content:space-between; padding:14px 14px; background:var(--surface2); cursor:pointer; min-height:52px; }
-.ex-name { font-weight:700; font-size:16px; }
-.ex-body { padding:12px 14px; }
-.set-row { display:grid; grid-template-columns:32px 1fr 1fr 36px; gap:6px; align-items:center; margin-bottom:8px; }
-.set-label { font-size:14px; font-weight:700; color:var(--muted); text-align:center; }
-.set-input { text-align:center; padding:12px 4px; font-size:18px; font-weight:700; min-height:48px; border-radius:var(--radius); }
-.set-del { font-size:20px; color:var(--subtle); text-align:center; cursor:pointer; min-height:44px; display:flex; align-items:center; justify-content:center; }
+.ex-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; overflow:hidden; }
+.ex-hdr { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--surface2); cursor:pointer; min-height:44px; }
+.ex-name { font-weight:700; font-size:15px; }
+.ex-body { padding:8px 12px; }
+.set-row { display:grid; grid-template-columns:28px 1fr 1.8fr 30px; gap:4px; align-items:center; margin-bottom:4px; }
+.set-label { font-size:13px; font-weight:700; color:var(--muted); text-align:center; }
+.set-input { text-align:center; padding:8px 4px; font-size:16px; font-weight:700; min-height:40px; border-radius:var(--radius); }
+.set-del { font-size:18px; color:var(--subtle); text-align:center; cursor:pointer; min-height:40px; display:flex; align-items:center; justify-content:center; }
 .set-del:hover { color:var(--red); }
-.set-hdr { display:grid; grid-template-columns:32px 1fr 1fr 36px; gap:6px; margin-bottom:4px; }
+.set-hdr { display:grid; grid-template-columns:28px 1fr 1.8fr 30px; gap:4px; margin-bottom:2px; }
 .set-hdr span { font-size:10px; font-weight:600; color:var(--subtle); text-align:center; text-transform:uppercase; letter-spacing:.5px; }
 
 /* ── WEIGHT STEPPER ── */
 .wt-stepper { display:flex; align-items:center; gap:0; width:100%; }
-.wt-stepper button { width:44px; height:48px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:22px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.wt-stepper button { width:36px; height:40px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:20px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .wt-stepper button:first-child { border-radius:var(--radius-sm) 0 0 var(--radius-sm); }
 .wt-stepper button:last-child { border-radius:0 var(--radius-sm) var(--radius-sm) 0; }
 .wt-stepper button:active { background:var(--blue-dim); color:var(--blue); }
-.wt-stepper input { flex:1; min-width:0; border-radius:0; border-left:none; border-right:none; text-align:center; font-weight:700; font-size:18px; height:48px; padding:0; }
+.wt-stepper input { flex:1; min-width:0; border-radius:0; border-left:none; border-right:none; text-align:center; font-weight:700; font-size:16px; height:40px; padding:0; }
 
 /* ── HISTORY TABLE ── */
 .hist-row { display:flex; align-items:center; padding:14px 14px; border-bottom:1px solid var(--border); cursor:pointer; min-height:52px; }
@@ -655,7 +655,7 @@ function renderLog() {
 
   // Active workout
   var elapsed = fmtDuration(Date.now() - activeWorkout.startTime);
-  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">';
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
   h += '<div><div class="card-title" style="margin:0;">Workout — '+fmtDate(activeWorkout.date)+'</div>';
   h += '<div style="font-size:12px;color:var(--subtle);" id="workoutDur">'+elapsed+'</div></div>';
   h += '<div style="display:flex;gap:8px;">';
