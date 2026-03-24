@@ -290,7 +290,7 @@ var DEFAULT_EXERCISES = [
   {id:"calf_raise", groupId:"legs", name:"Calf Raise", starred:false, order:6},
   {id:"lunge", groupId:"legs", name:"Lunges", starred:false, order:7},
   {id:"hip_thrust", groupId:"legs", name:"Hip Thrust", starred:false, order:8},
-  {id:"plank", groupId:"core", name:"Plank", starred:true, order:0},
+  {id:"plank", groupId:"core", name:"Plank", starred:true, order:0, timed:true},
   {id:"cable_crunch", groupId:"core", name:"Cable Crunch", starred:true, order:1},
   {id:"hanging_leg", groupId:"core", name:"Hanging Leg Raise", starred:false, order:2},
   {id:"russian_twist", groupId:"core", name:"Russian Twist", starred:false, order:3},
@@ -312,6 +312,7 @@ function saveWorkouts() { save('workouts', workouts); }
 function getExForGroup(gid) { return exercises.filter(function(e){ return e.groupId===gid; }).sort(function(a,b){ return a.order-b.order; }); }
 function getStarredEx(gid) { return getExForGroup(gid).filter(function(e){ return e.starred; }); }
 function getExById(eid) { return exercises.find(function(e){ return e.id===eid; }); }
+function isTimedEx(eid) { var ex = getExById(eid); return ex && ex.timed; }
 function getGroupById(gid) { return groups.find(function(g){ return g.id===gid; }); }
 function getSubgroups(gid) { return groups.filter(function(g){ return g.parentId===gid; }).sort(function(a,b){ return a.order-b.order; }); }
 function groupDisplayName(gid) { var g = getGroupById(gid); if (!g) return ''; if (g.parentId) { var p = getGroupById(g.parentId); return p ? p.name+': '+g.name : g.name; } return g.name; }
@@ -338,6 +339,8 @@ function todayStr() { var d=new Date(); return d.getFullYear()+'-'+String(d.getM
 function fmtDate(ds) { var p=ds.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
 function fmtDateLong(ds) { var p=ds.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}); }
 function fmtTime(iso) { if (!iso) return ''; var d=new Date(iso); var h=d.getHours(), m=d.getMinutes(), ampm=h>=12?'pm':'am'; h=h%12||12; return h+':'+String(m).padStart(2,'0')+ampm; }
+function fmtSecs(s) { s=+s; if(s<60) return s+'s'; var m=Math.floor(s/60), r=s%60; return r?m+'m '+r+'s':m+'m'; }
+function isValidSet(s, timed) { if(timed) return (+s.secs)>0; return (+s.reps)>0; }
 function est1RM(w,r) { return r===1 ? w : Math.round(w*(1+r/30)*10)/10; }
 function totalVol(sets) { var v=0; sets.forEach(function(s){ v+=((+s.reps)||0)*((+s.weight)||0); }); return v; }
 function formatVol(v) { return v>=1000 ? (v/1000).toFixed(1)+'k' : v.toString(); }
@@ -379,6 +382,22 @@ function getBestEst1RM(exId, beforeDate) {
       w.entries[j].sets.forEach(function(s) {
         var e = est1RM(+s.weight, +s.reps);
         if (e > best) best = e;
+      });
+    }
+  }
+  return best;
+}
+
+function getBestSecs(exId, beforeDate) {
+  var best = 0;
+  for (var i = 0; i < workouts.length; i++) {
+    var w = workouts[i];
+    if (beforeDate && w.date >= beforeDate) continue;
+    for (var j = 0; j < w.entries.length; j++) {
+      if (w.entries[j].exerciseId !== exId) continue;
+      w.entries[j].sets.forEach(function(s) {
+        var v = +(s.secs || 0);
+        if (v > best) best = v;
       });
     }
   }
@@ -519,11 +538,16 @@ function startWorkout(groupIds) {
     }
     starred.forEach(function(ex) {
       var last = getLastSessions(ex.id, 1, '9999-12-31');
+      var timed = ex.timed;
       var defaultSets;
       if (last.length > 0) {
-        defaultSets = last[0].sets.map(function(s){ return {reps:s.reps, weight:s.weight}; });
+        defaultSets = last[0].sets.map(function(s){
+          if(timed) return {secs:s.secs||'', weight:s.weight||0};
+          return {reps:s.reps, weight:s.weight};
+        });
       } else {
-        defaultSets = [{reps:'',weight:''},{reps:'',weight:''},{reps:'',weight:''}];
+        if(timed) defaultSets = [{secs:'',weight:0},{secs:'',weight:0},{secs:'',weight:0}];
+        else defaultSets = [{reps:'',weight:''},{reps:'',weight:''},{reps:'',weight:''}];
       }
       activeWorkout.entries.push({exerciseId:ex.id, sets:defaultSets, collapsed:false});
     });
@@ -546,9 +570,14 @@ function finishWorkout() {
   var duration = Date.now() - activeWorkout.startTime;
   var note = activeWorkout.note || '';
   var entries = activeWorkout.entries.filter(function(en) {
-    return en.sets.some(function(s){ return (+s.reps)>0 && (+s.weight)>0; });
+    var timed = isTimedEx(en.exerciseId);
+    return en.sets.some(function(s){ return isValidSet(s, timed); });
   }).map(function(en) {
-    return {exerciseId:en.exerciseId, sets:en.sets.filter(function(s){ return (+s.reps)>0 && (+s.weight)>0; }).map(function(s){ return {reps:+s.reps, weight:+s.weight}; })};
+    var timed = isTimedEx(en.exerciseId);
+    return {exerciseId:en.exerciseId, sets:en.sets.filter(function(s){ return isValidSet(s, timed); }).map(function(s){
+      if(timed) return {secs:+s.secs, weight:+(s.weight)||0};
+      return {reps:+s.reps, weight:+(s.weight)||0};
+    })};
   });
   if (entries.length === 0) { activeWorkout = null; renderLog(); return; }
   workouts.push({id:uid(), date:activeWorkout.date, completedAt:new Date().toISOString(), entries:entries, groups:activeWorkout.selectedGroups, duration:duration, note:note});
@@ -557,6 +586,11 @@ function finishWorkout() {
   autoBackup();
   activeWorkout = null;
   renderLog();
+}
+
+function confirmDiscard() {
+  if (!confirm('Discard this workout?')) return;
+  discardWorkout();
 }
 
 function discardWorkout() {
@@ -633,10 +667,11 @@ function renderLog() {
     var ex = getExById(en.exerciseId);
     var exName = ex ? ex.name : en.exerciseId;
     var grpName = ex ? groupDisplayName(ex.groupId) : '';
-    var bestPrior = getBestEst1RM(en.exerciseId, activeWorkout.date);
+    var timed = isTimedEx(en.exerciseId);
+    var bestPrior = timed ? 0 : getBestEst1RM(en.exerciseId, activeWorkout.date);
     h += '<div class="ex-card">';
     h += '<div class="ex-hdr" onclick="toggleCollapse('+idx+')">';
-    h += '<div><span class="ex-name">'+exName+'</span> <span style="font-size:11px;color:var(--subtle);">'+grpName+'</span></div>';
+    h += '<div><span class="ex-name">'+exName+'</span>'+(timed?' <span style="font-size:10px;color:var(--purple);font-weight:700;">⏱ TIMED</span>':'')+' <span style="font-size:11px;color:var(--subtle);">'+grpName+'</span></div>';
     h += '<button class="set-del" onclick="event.stopPropagation();removeExercise('+idx+')" title="Remove exercise">✕</button>';
     h += '</div>';
     if (!en.collapsed) {
@@ -647,30 +682,55 @@ function renderLog() {
         prev.forEach(function(ps) {
           h += '<div class="prev-sess"><div class="prev-sess-hdr">'+fmtDate(ps.date)+'</div>';
           ps.sets.forEach(function(s,si) {
-            h += '<div class="prev-set"><span class="ps-label">'+(si+1)+'</span><span>'+s.reps+' reps</span><span>'+s.weight+' lbs</span></div>';
+            if (timed) {
+              h += '<div class="prev-set"><span class="ps-label">'+(si+1)+'</span><span>'+fmtSecs(s.secs||s.reps||0)+'</span><span>'+(s.weight?s.weight+' lbs':'bodyweight')+'</span></div>';
+            } else {
+              h += '<div class="prev-set"><span class="ps-label">'+(si+1)+'</span><span>'+s.reps+' reps</span><span>'+s.weight+' lbs</span></div>';
+            }
           });
           h += '</div>';
         });
         h += '</div>';
       }
-      h += '<div class="set-hdr"><span>SET</span><span>REPS</span><span>WEIGHT (LBS)</span><span></span></div>';
-      en.sets.forEach(function(s, si) {
-        var prBadge = '';
-        if ((+s.reps) > 0 && (+s.weight) > 0) {
-          var thisE1rm = est1RM(+s.weight, +s.reps);
-          if (thisE1rm > bestPrior) prBadge = ' <span class="pr-badge">PR</span>';
-        }
-        h += '<div class="set-row">';
-        h += '<div class="set-label">'+(si+1)+prBadge+'</div>';
-        h += '<input type="number" class="set-input" value="'+(s.reps||'')+'" placeholder="–" min="0" onchange="updateSet('+idx+','+si+',\'reps\',this.value)">';
-        h += '<div class="wt-stepper">';
-        h += '<button onclick="stepWeight('+idx+','+si+',-2.5)">−</button>';
-        h += '<input type="number" value="'+(s.weight||'')+'" placeholder="–" step="2.5" min="0" onchange="updateSet('+idx+','+si+',\'weight\',this.value)">';
-        h += '<button onclick="stepWeight('+idx+','+si+',2.5)">+</button>';
-        h += '</div>';
-        h += '<div class="set-del" onclick="removeSet('+idx+','+si+')">✕</div>';
-        h += '</div>';
-      });
+      if (timed) {
+        h += '<div class="set-hdr"><span>SET</span><span>SECONDS</span><span>WEIGHT (LBS)</span><span></span></div>';
+        en.sets.forEach(function(s, si) {
+          var prBadge = '';
+          if ((+s.secs) > 0) {
+            var bestSecs = getBestSecs(en.exerciseId, activeWorkout.date);
+            if ((+s.secs) > bestSecs) prBadge = ' <span class="pr-badge">PR</span>';
+          }
+          h += '<div class="set-row">';
+          h += '<div class="set-label">'+(si+1)+prBadge+'</div>';
+          h += '<input type="number" class="set-input" value="'+(s.secs||'')+'" placeholder="–" min="0" onchange="updateSet('+idx+','+si+',\'secs\',this.value)">';
+          h += '<div class="wt-stepper">';
+          h += '<button onclick="stepWeight('+idx+','+si+',-2.5)">−</button>';
+          h += '<input type="number" value="'+(s.weight||'')+'" placeholder="0" step="2.5" min="0" onchange="updateSet('+idx+','+si+',\'weight\',this.value)">';
+          h += '<button onclick="stepWeight('+idx+','+si+',2.5)">+</button>';
+          h += '</div>';
+          h += '<div class="set-del" onclick="removeSet('+idx+','+si+')">✕</div>';
+          h += '</div>';
+        });
+      } else {
+        h += '<div class="set-hdr"><span>SET</span><span>REPS</span><span>WEIGHT (LBS)</span><span></span></div>';
+        en.sets.forEach(function(s, si) {
+          var prBadge = '';
+          if ((+s.reps) > 0 && (+s.weight) > 0) {
+            var thisE1rm = est1RM(+s.weight, +s.reps);
+            if (thisE1rm > bestPrior) prBadge = ' <span class="pr-badge">PR</span>';
+          }
+          h += '<div class="set-row">';
+          h += '<div class="set-label">'+(si+1)+prBadge+'</div>';
+          h += '<input type="number" class="set-input" value="'+(s.reps||'')+'" placeholder="–" min="0" onchange="updateSet('+idx+','+si+',\'reps\',this.value)">';
+          h += '<div class="wt-stepper">';
+          h += '<button onclick="stepWeight('+idx+','+si+',-2.5)">−</button>';
+          h += '<input type="number" value="'+(s.weight||'')+'" placeholder="0" step="2.5" min="0" onchange="updateSet('+idx+','+si+',\'weight\',this.value)">';
+          h += '<button onclick="stepWeight('+idx+','+si+',2.5)">+</button>';
+          h += '</div>';
+          h += '<div class="set-del" onclick="removeSet('+idx+','+si+')">✕</div>';
+          h += '</div>';
+        });
+      }
       h += '<button class="btn btn-sm btn-outline" style="margin-top:6px;" onclick="addSet('+idx+')">+ Set</button>';
       h += '</div>';
     }
@@ -685,7 +745,7 @@ function renderLog() {
   h += '<div style="display:flex;gap:8px;margin-top:12px;">';
   h += '<button class="btn btn-green btn-block" onclick="finishWorkout()">✓ Finish Workout</button>';
   h += '</div>';
-  h += '<button class="btn btn-sm btn-outline btn-block" style="margin-top:8px;color:var(--red);border-color:var(--red);" onclick="if(confirm(\'Discard this workout?\'))discardWorkout()">Discard</button>';
+  h += '<button class="btn btn-sm btn-outline btn-block" style="margin-top:8px;color:var(--red);border-color:var(--red);" onclick="confirmDiscard()">Discard</button>';
   el.innerHTML = h;
 }
 
@@ -706,7 +766,7 @@ function beginWorkout() {
 
 function toggleCollapse(idx) { activeWorkout.entries[idx].collapsed = !activeWorkout.entries[idx].collapsed; renderLog(); }
 function removeExercise(idx) { activeWorkout.entries.splice(idx,1); renderLog(); }
-function addSet(idx) { activeWorkout.entries[idx].sets.push({reps:'',weight:''}); renderLog(); }
+function addSet(idx) { var timed=isTimedEx(activeWorkout.entries[idx].exerciseId); activeWorkout.entries[idx].sets.push(timed?{secs:'',weight:0}:{reps:'',weight:''}); renderLog(); }
 function removeSet(eidx, sidx) { activeWorkout.entries[eidx].sets.splice(sidx,1); renderLog(); }
 function updateSet(eidx, sidx, field, val) { activeWorkout.entries[eidx].sets[sidx][field] = val; renderLog(); }
 function stepWeight(eidx, sidx, delta) {
@@ -753,9 +813,17 @@ function addExerciseModal() {
 
 function addExFromModal(exId) {
   var last = getLastSessions(exId, 1, '9999-12-31');
-  var defaultSets = last.length > 0
-    ? last[0].sets.map(function(s){ return {reps:s.reps, weight:s.weight}; })
-    : [{reps:'',weight:''},{reps:'',weight:''},{reps:'',weight:''}];
+  var timed = isTimedEx(exId);
+  var defaultSets;
+  if (last.length > 0) {
+    defaultSets = last[0].sets.map(function(s){
+      if(timed) return {secs:s.secs||'', weight:s.weight||0};
+      return {reps:s.reps, weight:s.weight};
+    });
+  } else {
+    if(timed) defaultSets = [{secs:'',weight:0},{secs:'',weight:0},{secs:'',weight:0}];
+    else defaultSets = [{reps:'',weight:''},{reps:'',weight:''},{reps:'',weight:''}];
+  }
   activeWorkout.entries.push({exerciseId:exId, sets:defaultSets, collapsed:false});
   closeModal();
   renderLog();
@@ -807,26 +875,41 @@ function showWorkoutDetail(wid) {
   // Compute running PR for each exercise up to this workout date
   w.entries.forEach(function(en) {
     var ex = getExById(en.exerciseId);
-    var bestPrior = getBestEst1RM(en.exerciseId, w.date);
-    h += '<div class="detail-ex"><div class="detail-ex-name">'+(ex?ex.name:en.exerciseId)+'</div><div class="detail-sets">';
-    en.sets.forEach(function(s,si) {
-      var e1rm = est1RM(s.weight, s.reps);
-      var prTag = e1rm > bestPrior ? ' <span class="pr-badge">PR</span>' : '';
-      if (e1rm > bestPrior) bestPrior = e1rm; // update running best for subsequent sets
-      h += '<div class="detail-set-row">Set '+(si+1)+': '+s.reps+' × '+s.weight+' lbs <span style="color:var(--subtle);font-size:11px;">(e1RM: '+e1rm+')</span>'+prTag+'</div>';
-    });
+    var timed = isTimedEx(en.exerciseId);
+    h += '<div class="detail-ex"><div class="detail-ex-name">'+(ex?ex.name:en.exerciseId)+(timed?' <span style="color:var(--purple);font-size:10px;">⏱</span>':'')+'</div><div class="detail-sets">';
+    if (timed) {
+      var bestSecs = getBestSecs(en.exerciseId, w.date);
+      en.sets.forEach(function(s,si) {
+        var secs = +(s.secs||0);
+        var prTag = secs > bestSecs ? ' <span class="pr-badge">PR</span>' : '';
+        if (secs > bestSecs) bestSecs = secs;
+        var wtText = s.weight ? ' × '+s.weight+' lbs' : '';
+        h += '<div class="detail-set-row">Set '+(si+1)+': '+fmtSecs(secs)+wtText+prTag+'</div>';
+      });
+    } else {
+      var bestPrior = getBestEst1RM(en.exerciseId, w.date);
+      en.sets.forEach(function(s,si) {
+        var e1rm = est1RM(s.weight, s.reps);
+        var prTag = e1rm > bestPrior ? ' <span class="pr-badge">PR</span>' : '';
+        if (e1rm > bestPrior) bestPrior = e1rm;
+        h += '<div class="detail-set-row">Set '+(si+1)+': '+s.reps+' × '+s.weight+' lbs <span style="color:var(--subtle);font-size:11px;">(e1RM: '+e1rm+')</span>'+prTag+'</div>';
+      });
+    }
     h += '</div></div>';
   });
   h += '<div class="btn-row"><button class="btn btn-outline btn-block" onclick="closeModal()">Close</button>';
-  h += '<button class="btn btn-danger btn-sm" onclick="if(confirm(\'Delete this workout?\')){ deleteWorkout(\''+wid+'\'); closeModal(); }">Delete</button></div>';
+  h += '<button class="btn btn-danger btn-sm" onclick="confirmDeleteWorkout(\''+wid+'\')">Delete</button></div>';
   openModal(h);
 }
 
-function deleteWorkout(wid) {
+function confirmDeleteWorkout(wid) {
+  if (!confirm('Delete this workout?')) return;
   workouts = workouts.filter(function(w){ return w.id !== wid; });
   saveWorkouts();
   autoBackup();
+  closeModal();
   renderHistory();
+  renderLog();
 }
 
 // ════════════════════════════════════════════════════════
@@ -859,11 +942,21 @@ function renderTrends() {
     h += '<button class="trend-tab'+(trendPeriod===p?' active':'')+'" onclick="trendPeriod=\''+p+'\';renderTrends()">'+label+'</button>';
   });
   h += '</div>';
+  var selTimed = isTimedEx(trendExId);
   h += '<div class="trend-metric">';
-  ['1rm','volume','maxwt'].forEach(function(m) {
-    var label = {'1rm':'Est. 1RM','volume':'Volume','maxwt':'Max Weight'}[m];
-    h += '<button class="metric-btn'+(trendMetric===m?' active':'')+'" onclick="trendMetric=\''+m+'\';renderTrends()">'+label+'</button>';
-  });
+  if (selTimed) {
+    if (trendMetric==='1rm'||trendMetric==='volume'||trendMetric==='maxwt') trendMetric='bestsecs';
+    ['bestsecs','totalsecs'].forEach(function(m) {
+      var label = {'bestsecs':'Best Hold','totalsecs':'Total Time'}[m];
+      h += '<button class="metric-btn'+(trendMetric===m?' active':'')+'" onclick="trendMetric=\''+m+'\';renderTrends()">'+label+'</button>';
+    });
+  } else {
+    if (trendMetric==='bestsecs'||trendMetric==='totalsecs') trendMetric='1rm';
+    ['1rm','volume','maxwt'].forEach(function(m) {
+      var label = {'1rm':'Est. 1RM','volume':'Volume','maxwt':'Max Weight'}[m];
+      h += '<button class="metric-btn'+(trendMetric===m?' active':'')+'" onclick="trendMetric=\''+m+'\';renderTrends()">'+label+'</button>';
+    });
+  }
   h += '</div>';
   h += '<select class="ex-select" onchange="trendExId=this.value;renderTrends()">';
   exList.forEach(function(eid) {
@@ -872,7 +965,8 @@ function renderTrends() {
     h += '<option value="'+eid+'"'+(eid===trendExId?' selected':'')+'>'+name+' ('+exWithData[eid]+' sessions)</option>';
   });
   h += '</select>';
-  h += '<div class="chart-container"><div class="chart-title">'+(trendMetric==='1rm'?'Estimated 1RM':trendMetric==='volume'?'Session Volume':'Max Weight')+' Over Time</div>';
+  var chartTitle = {'1rm':'Estimated 1RM','volume':'Session Volume','maxwt':'Max Weight','bestsecs':'Best Hold (seconds)','totalsecs':'Total Hold Time (seconds)'}[trendMetric]||trendMetric;
+  h += '<div class="chart-container"><div class="chart-title">'+chartTitle+' Over Time</div>';
   h += '<canvas id="trendChart"></canvas></div>';
   h += '<div id="trendStats"></div>';
   el.innerHTML = h;
@@ -898,12 +992,16 @@ function drawTrendChart() {
     w.entries.forEach(function(en) {
       if (en.exerciseId !== trendExId) return;
       var val = 0;
-      if (trendMetric === '1rm') {
-        en.sets.forEach(function(s) { var e = est1RM(s.weight, s.reps); if (e > val) val = e; });
+      if (trendMetric === 'bestsecs') {
+        en.sets.forEach(function(s) { var v=+(s.secs||0); if(v>val) val=v; });
+      } else if (trendMetric === 'totalsecs') {
+        en.sets.forEach(function(s) { val+=+(s.secs||0); });
+      } else if (trendMetric === '1rm') {
+        en.sets.forEach(function(s) { var e = est1RM(s.weight||0, s.reps||0); if (e > val) val = e; });
       } else if (trendMetric === 'volume') {
         val = totalVol(en.sets);
       } else {
-        en.sets.forEach(function(s) { if (s.weight > val) val = s.weight; });
+        en.sets.forEach(function(s) { if ((+(s.weight||0)) > val) val = +(s.weight||0); });
       }
       if (val > 0) points.push({date:w.date, val:val});
     });
@@ -1049,7 +1147,7 @@ function renderSettingsGroup(g, isSub) {
   h += '<div style="display:flex;gap:8px;" onclick="event.stopPropagation();">';
   if (!isSub) h += '<button class="btn btn-sm btn-outline" style="font-size:11px;padding:6px 10px;min-height:32px;" onclick="addSubgroupModal(\''+g.id+'\')">+ Sub</button>';
   h += '<button class="btn btn-sm btn-outline" onclick="editGroupModal(\''+g.id+'\')">Edit</button>';
-  h += '<button class="sg-ex-del" onclick="if(confirm(\'Delete '+g.name.replace(/'/g,"\\'")+(subs.length>0?' and its subgroups':'')+' and all exercises?\'))deleteGroup(\''+g.id+'\')">🗑</button>';
+  h += '<button class="sg-ex-del" onclick="confirmDeleteGroup(\''+g.id+'\')">🗑</button>';
   h += '</div></div>';
   // Show exercise body: always for parent groups, and for subgroups when expanded
   var showBody = isSub ? isExpanded : true;
@@ -1060,8 +1158,9 @@ function renderSettingsGroup(g, isSub) {
       h += '<div class="sg-ex" draggable="true" data-exid="'+ex.id+'" data-gid="'+g.id+'">';
       h += '<span class="sg-grip" title="Drag to reorder">⠿</span>';
       h += '<span class="sg-star '+(ex.starred?'on':'')+'" onclick="toggleStar(\''+ex.id+'\')">★</span>';
-      h += '<span class="sg-ex-name">'+ex.name+'</span>';
-      h += '<span class="sg-ex-del" onclick="if(confirm(\'Delete '+ex.name.replace(/'/g,"\\'")+'?\'))deleteExercise(\''+ex.id+'\')">✕</span>';
+      h += '<span class="sg-ex-name">'+ex.name+(ex.timed?' <span style="font-size:10px;color:var(--purple);font-weight:700;">⏱</span>':'')+'</span>';
+      h += '<span style="font-size:18px;cursor:pointer;min-width:36px;min-height:44px;display:flex;align-items:center;justify-content:center;color:'+(ex.timed?'var(--purple)':'var(--star-off)')+'" onclick="toggleTimed(\''+ex.id+'\')" title="Toggle timed/reps">⏱</span>';
+      h += '<span class="sg-ex-del" onclick="confirmDeleteExercise(\''+ex.id+'\')">✕</span>';
       h += '</div>';
     });
     if (exs.length === 0) {
@@ -1121,7 +1220,7 @@ function renderSettings() {
 
   // Groups & Exercises
   h += '<div class="card-title">Muscle Groups & Exercises</div>';
-  h += '<p style="color:var(--muted);font-size:12px;margin-bottom:14px;">★ starred exercises are your defaults when starting a workout. Tap ☆ to star/unstar.</p>';
+  h += '<p style="color:var(--muted);font-size:12px;margin-bottom:14px;">★ starred = default exercises. ⏱ timed = tracks seconds instead of reps (planks, holds).</p>';
   getTopLevelGroups().forEach(function(g) {
     h += renderSettingsGroup(g, false);
   });
@@ -1133,7 +1232,7 @@ function renderSettings() {
   h += '<div style="display:flex;gap:8px;">';
   h += '<button class="btn btn-sm btn-outline" onclick="exportCSV()">Export CSV</button>';
   h += '</div>';
-  h += '<button class="btn btn-sm btn-danger" style="margin-top:10px;" onclick="if(confirm(\'Reset all data to defaults? This cannot be undone.\'))resetAll()">Reset to Defaults</button>';
+  h += '<button class="btn btn-sm btn-danger" style="margin-top:10px;" onclick="confirmResetAll()">Reset to Defaults</button>';
   h += '</div>';
 
   el.innerHTML = h;
@@ -1247,6 +1346,11 @@ function toggleStar(exId) {
   if (ex) { ex.starred = !ex.starred; saveExercises(); renderSettings(); }
 }
 
+function toggleTimed(exId) {
+  var ex = exercises.find(function(e){ return e.id===exId; });
+  if (ex) { ex.timed = !ex.timed; saveExercises(); renderSettings(); }
+}
+
 function addExercise(gid) {
   var input = document.getElementById('addEx_'+gid);
   var name = input.value.trim();
@@ -1258,10 +1362,24 @@ function addExercise(gid) {
   renderSettings();
 }
 
+function confirmDeleteExercise(exId) {
+  var ex = exercises.find(function(e){ return e.id===exId; });
+  if (!confirm('Delete '+(ex?ex.name:'this exercise')+'?')) return;
+  deleteExercise(exId);
+}
+
 function deleteExercise(exId) {
   exercises = exercises.filter(function(e){ return e.id !== exId; });
   saveExercises();
   renderSettings();
+}
+
+function confirmDeleteGroup(gid) {
+  var g = getGroupById(gid);
+  var subs = getSubgroups(gid);
+  var msg = 'Delete '+(g?g.name:'this group')+(subs.length>0?' and its subgroups':'')+' and all exercises?';
+  if (!confirm(msg)) return;
+  deleteGroup(gid);
 }
 
 function deleteGroup(gid) {
@@ -1396,13 +1514,18 @@ function restoreFromAutoBackup() {
 }
 
 function exportCSV() {
-  var lines = ['Date,Exercise,Group,Set,Reps,Weight,Est1RM,Volume'];
+  var lines = ['Date,Time,Exercise,Group,Type,Set,Reps,Seconds,Weight,Est1RM,Volume'];
   workouts.forEach(function(w) {
+    var time = w.completedAt ? fmtTime(w.completedAt) : '';
     w.entries.forEach(function(en) {
       var ex = getExById(en.exerciseId);
       var grp = ex ? getGroupById(ex.groupId) : null;
+      var timed = isTimedEx(en.exerciseId);
       en.sets.forEach(function(s, si) {
-        lines.push([w.date, ex?ex.name:en.exerciseId, grp?grp.name:'', si+1, s.reps, s.weight, est1RM(s.weight,s.reps), s.reps*s.weight].join(','));
+        var reps = s.reps||'', secs = s.secs||'', wt = s.weight||0;
+        var e1rm = timed ? '' : est1RM(wt, +reps);
+        var vol = timed ? '' : (+reps)*(+wt);
+        lines.push([w.date, time, ex?ex.name:en.exerciseId, grp?grp.name:'', timed?'timed':'reps', si+1, reps, secs, wt, e1rm, vol].join(','));
       });
     });
   });
@@ -1411,6 +1534,11 @@ function exportCSV() {
   a.href = URL.createObjectURL(blob);
   a.download = 'lifting-tracker-'+todayStr()+'.csv';
   a.click();
+}
+
+function confirmResetAll() {
+  if (!confirm('Reset all data to defaults? This cannot be undone.')) return;
+  resetAll();
 }
 
 function resetAll() {
