@@ -337,6 +337,7 @@ function getSelectableGroups() {
 function todayStr() { var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function fmtDate(ds) { var p=ds.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
 function fmtDateLong(ds) { var p=ds.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}); }
+function fmtTime(iso) { if (!iso) return ''; var d=new Date(iso); var h=d.getHours(), m=d.getMinutes(), ampm=h>=12?'pm':'am'; h=h%12||12; return h+':'+String(m).padStart(2,'0')+ampm; }
 function est1RM(w,r) { return r===1 ? w : Math.round(w*(1+r/30)*10)/10; }
 function totalVol(sets) { var v=0; sets.forEach(function(s){ v+=((+s.reps)||0)*((+s.weight)||0); }); return v; }
 function formatVol(v) { return v>=1000 ? (v/1000).toFixed(1)+'k' : v.toString(); }
@@ -550,18 +551,8 @@ function finishWorkout() {
     return {exerciseId:en.exerciseId, sets:en.sets.filter(function(s){ return (+s.reps)>0 && (+s.weight)>0; }).map(function(s){ return {reps:+s.reps, weight:+s.weight}; })};
   });
   if (entries.length === 0) { activeWorkout = null; renderLog(); return; }
-  var existing = workouts.find(function(w){ return w.date === activeWorkout.date; });
-  if (existing) {
-    entries.forEach(function(en) {
-      var found = existing.entries.find(function(e){ return e.exerciseId === en.exerciseId; });
-      if (found) { found.sets = en.sets; } else { existing.entries.push(en); }
-    });
-    existing.duration = (existing.duration || 0) + duration;
-    if (note) existing.note = existing.note ? existing.note + ' | ' + note : note;
-  } else {
-    workouts.push({id:uid(), date:activeWorkout.date, entries:entries, groups:activeWorkout.selectedGroups, duration:duration, note:note});
-  }
-  workouts.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
+  workouts.push({id:uid(), date:activeWorkout.date, completedAt:new Date().toISOString(), entries:entries, groups:activeWorkout.selectedGroups, duration:duration, note:note});
+  workouts.sort(function(a,b){ if (a.date!==b.date) return a.date<b.date?-1:1; var at=a.completedAt||'', bt=b.completedAt||''; return at<bt?-1:at>bt?1:0; });
   saveWorkouts();
   autoBackup();
   activeWorkout = null;
@@ -619,8 +610,9 @@ function renderLog() {
         var gNames = (w.groups||[]).map(function(gid){ return groupDisplayName(gid) || gid; }).join(', ');
         var vol = 0;
         w.entries.forEach(function(en){ vol += totalVol(en.sets); });
+        var timeText = w.completedAt ? '<span class="hist-dur">' + fmtTime(w.completedAt) + '</span>' : '';
         var durText = w.duration ? '<span class="hist-dur">' + fmtDuration(w.duration) + '</span>' : '';
-        h += '<div class="hist-row" onclick="showWorkoutDetail(\''+w.id+'\')"><div class="hist-date">'+fmtDate(w.date)+'</div><div class="hist-groups">'+gNames+'</div><div class="hist-vol">'+formatVol(vol)+' lbs'+durText+'</div></div>';
+        h += '<div class="hist-row" onclick="showWorkoutDetail(\''+w.id+'\')"><div class="hist-date">'+fmtDate(w.date)+timeText+'</div><div class="hist-groups">'+gNames+'</div><div class="hist-vol">'+formatVol(vol)+' lbs'+durText+'</div></div>';
       });
     }
     el.innerHTML = h;
@@ -791,8 +783,9 @@ function renderHistory() {
     var gNames = (w.groups||[]).map(function(gid){ return groupDisplayName(gid) || gid; }).join(', ');
     var vol = 0;
     w.entries.forEach(function(en){ vol += totalVol(en.sets); });
+    var timeText = w.completedAt ? '<span class="hist-dur">' + fmtTime(w.completedAt) + '</span>' : '';
     var durText = w.duration ? '<span class="hist-dur">' + fmtDuration(w.duration) + '</span>' : '';
-    h += '<div class="hist-row" onclick="showWorkoutDetail(\''+w.id+'\')"><div class="hist-date">'+fmtDate(w.date)+'</div><div class="hist-groups">'+(gNames||w.entries.length+' exercises')+'</div><div class="hist-vol">'+formatVol(vol)+' lbs'+durText+'</div></div>';
+    h += '<div class="hist-row" onclick="showWorkoutDetail(\''+w.id+'\')"><div class="hist-date">'+fmtDate(w.date)+timeText+'</div><div class="hist-groups">'+(gNames||w.entries.length+' exercises')+'</div><div class="hist-vol">'+formatVol(vol)+' lbs'+durText+'</div></div>';
   });
   el.innerHTML = h;
 }
@@ -803,7 +796,8 @@ function showWorkoutDetail(wid) {
   var gNames = (w.groups||[]).map(function(gid){ return groupDisplayName(gid) || gid; }).join(', ');
   var vol = 0;
   w.entries.forEach(function(en){ vol += totalVol(en.sets); });
-  var h = '<h2>'+fmtDateLong(w.date)+'</h2>';
+  var timeStr = w.completedAt ? ' at ' + fmtTime(w.completedAt) : '';
+  var h = '<h2>'+fmtDateLong(w.date)+timeStr+'</h2>';
   var meta = gNames + ' — ' + formatVol(vol) + ' lbs total volume';
   if (w.duration) meta += ' — ' + fmtDuration(w.duration);
   h += '<div style="font-size:13px;color:var(--muted);margin-bottom:14px;">'+meta+'</div>';
@@ -1032,14 +1026,19 @@ function getCutoffDate(period) {
 // SETTINGS PAGE
 // ════════════════════════════════════════════════════════
 var expandedSubgroups = {};
-function toggleSubgroup(gid) { expandedSubgroups[gid] = !expandedSubgroups[gid]; renderSettings(); }
+function toggleSubgroup(gid) {
+  // Default to expanded (true), so first toggle collapses
+  if (expandedSubgroups[gid] === undefined) expandedSubgroups[gid] = true;
+  expandedSubgroups[gid] = !expandedSubgroups[gid];
+  renderSettings();
+}
 
 function renderSettingsGroup(g, isSub) {
   var exs = getExForGroup(g.id);
   var subs = getSubgroups(g.id);
   var cls = isSub ? 'settings-subgroup' : 'settings-group';
   var hdrCls = isSub ? 'sg-hdr sg-hdr-sub' : 'sg-hdr';
-  var isExpanded = isSub ? !!expandedSubgroups[g.id] : true;
+  var isExpanded = isSub ? (expandedSubgroups[g.id] !== false) : true;
   var h = '<div class="'+cls+'">';
   h += '<div class="'+hdrCls+'"'+(isSub?' onclick="toggleSubgroup(\''+g.id+'\')" style="cursor:pointer;"':'')+'>';
   if (isSub) {
@@ -1052,8 +1051,9 @@ function renderSettingsGroup(g, isSub) {
   h += '<button class="btn btn-sm btn-outline" onclick="editGroupModal(\''+g.id+'\')">Edit</button>';
   h += '<button class="sg-ex-del" onclick="if(confirm(\'Delete '+g.name.replace(/'/g,"\\'")+(subs.length>0?' and its subgroups':'')+' and all exercises?\'))deleteGroup(\''+g.id+'\')">🗑</button>';
   h += '</div></div>';
-  // Show exercise body: always for groups without subs, or when a subgroup is expanded
-  if (subs.length === 0 || (isSub && isExpanded)) {
+  // Show exercise body: always for parent groups, and for subgroups when expanded
+  var showBody = isSub ? isExpanded : true;
+  if (showBody) {
     h += '<div class="sg-body">';
     h += '<div class="sg-add"><input id="addEx_'+g.id+'" placeholder="Add exercise..." onkeydown="if(event.key===\'Enter\')addExercise(\''+g.id+'\')"><button class="btn btn-sm btn-primary" onclick="addExercise(\''+g.id+'\')">+</button></div>';
     exs.forEach(function(ex) {
