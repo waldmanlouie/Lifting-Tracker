@@ -38,19 +38,19 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 textarea { resize:vertical; min-height:60px; }
 
 /* ── HEADER ── */
-.app-hdr { background:var(--surface); padding:10px 16px 8px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
-.app-hdr h1 { font-size:18px; font-weight:800; letter-spacing:-0.3px; }
+.app-hdr { background:var(--surface); padding:8px 14px 6px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+.app-hdr h1 { font-size:16px; font-weight:800; letter-spacing:-0.3px; }
 .app-hdr h1 span { color:var(--blue); }
-.hdr-date { font-size:12px; color:var(--muted); }
+.hdr-date { font-size:11px; color:var(--muted); }
 
 /* ── BOTTOM NAV ── */
 .bnav { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); display:flex; z-index:100; padding-bottom:env(safe-area-inset-bottom, 0); }
-.bnav button { flex:1; padding:6px 4px 5px; text-align:center; font-size:10px; font-weight:600; color:var(--subtle); letter-spacing:.3px; transition:color .15s; min-height:48px; }
+.bnav button { flex:1; padding:4px 4px 3px; text-align:center; font-size:9px; font-weight:600; color:var(--subtle); letter-spacing:.3px; transition:color .15s; min-height:44px; }
 .bnav button.active { color:var(--blue); }
-.bnav .nav-icon { display:block; font-size:20px; margin-bottom:1px; }
+.bnav .nav-icon { display:block; font-size:18px; margin-bottom:1px; }
 
 /* ── PAGE CONTAINERS ── */
-.page { display:none; padding:12px; }
+.page { display:none; padding:10px; }
 .page.active { display:block; }
 
 /* ── CARDS ── */
@@ -58,14 +58,14 @@ textarea { resize:vertical; min-height:60px; }
 .card-title { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
 
 /* ── BUTTONS ── */
-.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 16px; border-radius:var(--radius); font-weight:700; font-size:15px; transition:all .15s; min-height:42px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 14px; border-radius:var(--radius); font-weight:700; font-size:14px; transition:all .15s; min-height:38px; }
 .btn-primary { background:var(--blue); color:#fff; }
 .btn-primary:hover { background:#2563eb; }
 .btn-danger { background:var(--red); color:#fff; }
 .btn-outline { border:1px solid var(--border); color:var(--muted); }
 .btn-outline:hover { border-color:var(--blue); color:var(--blue); }
 .btn-outline.selected { border-color:var(--blue); background:var(--blue-dim); color:var(--text); }
-.btn-sm { padding:7px 12px; font-size:13px; border-radius:var(--radius-sm); min-height:36px; }
+.btn-sm { padding:5px 10px; font-size:12px; border-radius:var(--radius-sm); min-height:32px; }
 .btn-block { width:100%; }
 .btn-green { background:var(--green); color:#fff; }
 .btn-green:hover { background:#16a34a; }
@@ -78,25 +78,25 @@ textarea { resize:vertical; min-height:60px; }
 .chip-group-label:first-child { padding-top:0; }
 
 /* ── EXERCISE LOG ── */
-.ex-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; overflow:hidden; }
-.ex-hdr { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--surface2); cursor:pointer; min-height:44px; }
-.ex-name { font-weight:700; font-size:15px; }
-.ex-body { padding:8px 12px; }
-.set-row { display:grid; grid-template-columns:28px 1fr 1.8fr 30px; gap:4px; align-items:center; margin-bottom:4px; }
-.set-label { font-size:13px; font-weight:700; color:var(--muted); text-align:center; }
-.set-input { text-align:center; padding:8px 4px; font-size:16px; font-weight:700; min-height:40px; border-radius:var(--radius); }
-.set-del { font-size:18px; color:var(--subtle); text-align:center; cursor:pointer; min-height:40px; display:flex; align-items:center; justify-content:center; }
+.ex-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:6px; overflow:hidden; }
+.ex-hdr { display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:var(--surface2); cursor:pointer; min-height:38px; }
+.ex-name { font-weight:700; font-size:14px; }
+.ex-body { padding:6px 10px; }
+.set-row { display:grid; grid-template-columns:24px 60px 1fr 26px; gap:4px; align-items:center; margin-bottom:3px; }
+.set-label { font-size:12px; font-weight:700; color:var(--muted); text-align:center; }
+.set-input { text-align:center; padding:6px 2px; font-size:15px; font-weight:700; min-height:36px; border-radius:var(--radius-sm); }
+.set-del { font-size:16px; color:var(--subtle); text-align:center; cursor:pointer; min-height:36px; display:flex; align-items:center; justify-content:center; }
 .set-del:hover { color:var(--red); }
-.set-hdr { display:grid; grid-template-columns:28px 1fr 1.8fr 30px; gap:4px; margin-bottom:2px; }
-.set-hdr span { font-size:10px; font-weight:600; color:var(--subtle); text-align:center; text-transform:uppercase; letter-spacing:.5px; }
+.set-hdr { display:grid; grid-template-columns:24px 60px 1fr 26px; gap:4px; margin-bottom:1px; }
+.set-hdr span { font-size:9px; font-weight:600; color:var(--subtle); text-align:center; text-transform:uppercase; letter-spacing:.5px; }
 
 /* ── WEIGHT STEPPER ── */
 .wt-stepper { display:flex; align-items:center; gap:0; width:100%; }
-.wt-stepper button { width:36px; height:40px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:20px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.wt-stepper button { width:34px; height:36px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:18px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .wt-stepper button:first-child { border-radius:var(--radius-sm) 0 0 var(--radius-sm); }
 .wt-stepper button:last-child { border-radius:0 var(--radius-sm) var(--radius-sm) 0; }
 .wt-stepper button:active { background:var(--blue-dim); color:var(--blue); }
-.wt-stepper input { flex:1; min-width:0; border-radius:0; border-left:none; border-right:none; text-align:center; font-weight:700; font-size:16px; height:40px; padding:0; }
+.wt-stepper input { flex:1; min-width:0; border-radius:0; border-left:none; border-right:none; text-align:center; font-weight:700; font-size:15px; height:36px; padding:0; }
 
 /* ── HISTORY TABLE ── */
 .hist-row { display:flex; align-items:center; padding:14px 14px; border-bottom:1px solid var(--border); cursor:pointer; min-height:52px; }
@@ -655,11 +655,11 @@ function renderLog() {
 
   // Active workout
   var elapsed = fmtDuration(Date.now() - activeWorkout.startTime);
-  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
-  h += '<div><div class="card-title" style="margin:0;">Workout — '+fmtDate(activeWorkout.date)+'</div>';
-  h += '<div style="font-size:12px;color:var(--subtle);" id="workoutDur">'+elapsed+'</div></div>';
-  h += '<div style="display:flex;gap:8px;">';
-  h += '<button class="btn btn-sm btn-outline" onclick="startRestTimer()" title="Rest Timer" style="font-size:18px;padding:8px 12px;">⏱</button>';
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+  h += '<div><div class="card-title" style="margin:0;font-size:11px;">Workout — '+fmtDate(activeWorkout.date)+'</div>';
+  h += '<div style="font-size:11px;color:var(--subtle);" id="workoutDur">'+elapsed+'</div></div>';
+  h += '<div style="display:flex;gap:6px;">';
+  h += '<button class="btn btn-sm btn-outline" onclick="startRestTimer()" title="Rest Timer" style="font-size:16px;padding:5px 10px;">⏱</button>';
   h += '<button class="btn btn-sm btn-outline" onclick="addExerciseModal()">+ Exercise</button>';
   h += '</div></div>';
 
@@ -671,7 +671,7 @@ function renderLog() {
     var bestPrior = timed ? 0 : getBestEst1RM(en.exerciseId, activeWorkout.date);
     h += '<div class="ex-card">';
     h += '<div class="ex-hdr" onclick="toggleCollapse('+idx+')">';
-    h += '<div><span class="ex-name">'+exName+'</span>'+(timed?' <span style="font-size:10px;color:var(--purple);font-weight:700;">⏱ TIMED</span>':'')+' <span style="font-size:11px;color:var(--subtle);">'+grpName+'</span></div>';
+    h += '<div><span class="ex-name">'+exName+'</span>'+(timed?' <span style="font-size:9px;color:var(--purple);font-weight:700;">⏱ TIMED</span>':'')+' <span style="font-size:10px;color:var(--subtle);">'+grpName+'</span></div>';
     h += '<button class="set-del" onclick="event.stopPropagation();removeExercise('+idx+')" title="Remove exercise">✕</button>';
     h += '</div>';
     if (!en.collapsed) {
@@ -731,7 +731,7 @@ function renderLog() {
           h += '</div>';
         });
       }
-      h += '<button class="btn btn-sm btn-outline" style="margin-top:6px;" onclick="addSet('+idx+')">+ Set</button>';
+      h += '<button class="btn btn-sm btn-outline" style="margin-top:3px;" onclick="addSet('+idx+')">+ Set</button>';
       h += '</div>';
     }
     h += '</div>';
