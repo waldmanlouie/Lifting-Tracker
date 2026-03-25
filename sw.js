@@ -1,4 +1,4 @@
-var CACHE_NAME = 'lift-v2';
+var CACHE_NAME = 'lift-v3';
 var URLS_TO_CACHE = [
   './',
   './lifting-tracker.html',

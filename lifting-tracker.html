@@ -1110,10 +1110,16 @@ function getCutoffDate(period) {
 // SETTINGS PAGE
 // ════════════════════════════════════════════════════════
 var expandedSubgroups = {};
+var expandedGroups = {};
 function toggleSubgroup(gid) {
   // Default to expanded (true), so first toggle collapses
   if (expandedSubgroups[gid] === undefined) expandedSubgroups[gid] = true;
   expandedSubgroups[gid] = !expandedSubgroups[gid];
+  renderSettings();
+}
+function toggleGroup(gid) {
+  if (expandedGroups[gid] === undefined) expandedGroups[gid] = true;
+  expandedGroups[gid] = !expandedGroups[gid];
   renderSettings();
 }
 
@@ -1122,21 +1128,22 @@ function renderSettingsGroup(g, isSub) {
   var subs = getSubgroups(g.id);
   var cls = isSub ? 'settings-subgroup' : 'settings-group';
   var hdrCls = isSub ? 'sg-hdr sg-hdr-sub' : 'sg-hdr';
-  var isExpanded = isSub ? (expandedSubgroups[g.id] !== false) : true;
+  var isExpanded = isSub ? (expandedSubgroups[g.id] !== false) : (expandedGroups[g.id] !== false);
   var h = '<div class="'+cls+'">';
-  h += '<div class="'+hdrCls+'"'+(isSub?' onclick="toggleSubgroup(\''+g.id+'\')" style="cursor:pointer;"':'')+'>';
+  h += '<div class="'+hdrCls+'" onclick="'+(isSub?'toggleSubgroup':'toggleGroup')+'(\''+g.id+'\')" style="cursor:pointer;">';
   if (isSub) {
     h += '<span class="sg-name" style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;color:var(--subtle);transition:transform .15s;'+(isExpanded?'transform:rotate(90deg);':'')+'">▶</span>'+g.name+' <span style="font-size:11px;color:var(--subtle);">('+exs.length+')</span></span>';
   } else {
-    h += '<span class="sg-name">'+g.name+' <span style="font-size:11px;color:var(--subtle);">('+exs.length+(subs.length>0?' + '+subs.length+' sub':'')+')</span></span>';
+    var countText = exs.length+(subs.length>0?' + '+subs.length+' sub':'');
+    h += '<span class="sg-name" style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;color:var(--subtle);transition:transform .15s;'+(isExpanded?'transform:rotate(90deg);':'')+'">▶</span>'+g.name+' <span style="font-size:11px;color:var(--subtle);">('+countText+')</span></span>';
   }
   h += '<div style="display:flex;gap:8px;" onclick="event.stopPropagation();">';
   if (!isSub) h += '<button class="btn btn-sm btn-outline" style="font-size:11px;padding:6px 10px;min-height:32px;" onclick="addSubgroupModal(\''+g.id+'\')">+ Sub</button>';
   h += '<button class="btn btn-sm btn-outline" onclick="editGroupModal(\''+g.id+'\')">Edit</button>';
   h += '<button class="sg-ex-del" onclick="confirmDeleteGroup(\''+g.id+'\')">🗑</button>';
   h += '</div></div>';
-  // Show exercise body: always for parent groups, and for subgroups when expanded
-  var showBody = isSub ? isExpanded : true;
+  // Show body when expanded (both parent groups and subgroups)
+  var showBody = isExpanded;
   if (showBody) {
     h += '<div class="sg-body">';
     h += '<div class="sg-add"><input id="addEx_'+g.id+'" placeholder="Add exercise..." onkeydown="if(event.key===\'Enter\')addExercise(\''+g.id+'\')"><button class="btn btn-sm btn-primary" onclick="addExercise(\''+g.id+'\')">+</button></div>';
@@ -1153,8 +1160,8 @@ function renderSettingsGroup(g, isSub) {
       h += '<div style="padding:12px 14px;color:var(--subtle);font-size:12px;font-style:italic;">No exercises yet</div>';
     }
     h += '</div>';
+    subs.forEach(function(sub) { h += renderSettingsGroup(sub, true); });
   }
-  subs.forEach(function(sub) { h += renderSettingsGroup(sub, true); });
   h += '</div>';
   return h;
 }
