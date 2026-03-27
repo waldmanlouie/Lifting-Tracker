@@ -519,6 +519,35 @@ applyTheme();
 var activeWorkout = null; // {date, selectedGroups:[], entries:[], startTime, note}
 var durationInterval = null;
 
+function saveActiveWorkout() {
+  if (activeWorkout) {
+    save('activeWorkout', activeWorkout);
+  } else {
+    localStorage.removeItem('lt_activeWorkout');
+  }
+}
+
+function loadActiveWorkout() {
+  var saved = load('activeWorkout', null);
+  if (saved && saved.entries && saved.entries.length > 0) {
+    return saved;
+  }
+  return null;
+}
+
+function resumeWorkout() {
+  var saved = loadActiveWorkout();
+  if (!saved) return;
+  activeWorkout = saved;
+  durationInterval = setInterval(function() { updateDurationDisplay(); }, 60000);
+  renderLog();
+}
+
+function discardSavedWorkout() {
+  localStorage.removeItem('lt_activeWorkout');
+  renderLog();
+}
+
 function startWorkout(groupIds) {
   activeWorkout = {date:todayStr(), selectedGroups:groupIds, entries:[], startTime:Date.now(), note:''};
   // Add starred exercises for each group
@@ -545,6 +574,7 @@ function startWorkout(groupIds) {
       activeWorkout.entries.push({exerciseId:ex.id, sets:defaultSets, collapsed:false});
     });
   });
+  saveActiveWorkout();
   durationInterval = setInterval(function() { updateDurationDisplay(); }, 60000);
   renderLog();
 }
@@ -572,12 +602,13 @@ function finishWorkout() {
       return {reps:+s.reps, weight:+(s.weight)||0};
     })};
   });
-  if (entries.length === 0) { activeWorkout = null; renderLog(); return; }
+  if (entries.length === 0) { activeWorkout = null; saveActiveWorkout(); renderLog(); return; }
   workouts.push({id:uid(), date:activeWorkout.date, completedAt:new Date().toISOString(), entries:entries, groups:activeWorkout.selectedGroups, duration:duration, note:note});
   workouts.sort(function(a,b){ if (a.date!==b.date) return a.date<b.date?-1:1; var at=a.completedAt||'', bt=b.completedAt||''; return at<bt?-1:at>bt?1:0; });
   saveWorkouts();
   autoBackup();
   activeWorkout = null;
+  saveActiveWorkout();
   renderLog();
 }
 
@@ -590,6 +621,7 @@ function discardWorkout() {
   if (durationInterval) { clearInterval(durationInterval); durationInterval = null; }
   stopRestTimer();
   activeWorkout = null;
+  saveActiveWorkout();
   renderLog();
 }
 
@@ -617,7 +649,26 @@ function renderLog() {
   document.getElementById('hdrDate').textContent = fmtDate(todayStr());
 
   if (!activeWorkout) {
-    var h = '<div style="margin-bottom:16px;"><div class="card-title">Start Workout</div>';
+    var h = '';
+    // Resume banner for interrupted workout
+    var savedWk = loadActiveWorkout();
+    if (savedWk) {
+      var savedElapsed = fmtDuration(Date.now() - savedWk.startTime);
+      var savedSets = 0;
+      savedWk.entries.forEach(function(en) {
+        var timed = isTimedEx(en.exerciseId);
+        en.sets.forEach(function(s) { if (isValidSet(s, timed)) savedSets++; });
+      });
+      var savedGNames = (savedWk.selectedGroups||[]).map(function(gid){ return groupDisplayName(gid) || gid; }).join(', ');
+      h += '<div style="background:var(--blue-dim);border:1px solid var(--blue);border-radius:var(--radius);padding:14px;margin-bottom:16px;">';
+      h += '<div style="font-weight:700;font-size:14px;margin-bottom:4px;">Workout in progress</div>';
+      h += '<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">'+savedGNames+' · '+savedElapsed+' · '+savedSets+' set'+(savedSets!==1?'s':'')+' logged</div>';
+      h += '<div style="display:flex;gap:8px;">';
+      h += '<button class="btn btn-primary" style="flex:1;" onclick="resumeWorkout()">Resume</button>';
+      h += '<button class="btn btn-outline" style="flex:0;padding:8px 16px;color:var(--red);border-color:var(--red);" onclick="if(confirm(\'Discard this workout?\')){discardSavedWorkout();}">Discard</button>';
+      h += '</div></div>';
+    }
+    h += '<div style="margin-bottom:16px;"><div class="card-title">Start Workout</div>';
     h += '<p style="color:var(--muted);font-size:13px;margin-bottom:14px;">Select muscle groups for today:</p>';
     h += '<div class="chips" id="groupChips">';
     getSelectableGroups().forEach(function(item) {
@@ -725,7 +776,7 @@ function renderLog() {
 
   // Workout note
   h += '<div class="workout-note">';
-  h += '<textarea placeholder="Workout notes (optional)..." onchange="activeWorkout.note=this.value" onblur="activeWorkout.note=this.value">'+(activeWorkout.note||'')+'</textarea>';
+  h += '<textarea placeholder="Workout notes (optional)..." onchange="activeWorkout.note=this.value;saveActiveWorkout();" onblur="activeWorkout.note=this.value;saveActiveWorkout();">'+(activeWorkout.note||'')+'</textarea>';
   h += '</div>';
 
   h += '<div style="display:flex;gap:8px;margin-top:12px;">';
@@ -750,16 +801,16 @@ function beginWorkout() {
   startWorkout(sel);
 }
 
-function toggleCollapse(idx) { activeWorkout.entries[idx].collapsed = !activeWorkout.entries[idx].collapsed; renderLog(); }
-function removeExercise(idx) { activeWorkout.entries.splice(idx,1); renderLog(); }
-function addSet(idx) { var timed=isTimedEx(activeWorkout.entries[idx].exerciseId); activeWorkout.entries[idx].sets.push(timed?{secs:'',weight:0}:{reps:'',weight:''}); renderLog(); }
-function removeSet(eidx, sidx) { activeWorkout.entries[eidx].sets.splice(sidx,1); renderLog(); }
-function updateSet(eidx, sidx, field, val) { activeWorkout.entries[eidx].sets[sidx][field] = val; renderLog(); }
+function toggleCollapse(idx) { activeWorkout.entries[idx].collapsed = !activeWorkout.entries[idx].collapsed; saveActiveWorkout(); renderLog(); }
+function removeExercise(idx) { activeWorkout.entries.splice(idx,1); saveActiveWorkout(); renderLog(); }
+function addSet(idx) { var timed=isTimedEx(activeWorkout.entries[idx].exerciseId); activeWorkout.entries[idx].sets.push(timed?{secs:'',weight:0}:{reps:'',weight:''}); saveActiveWorkout(); renderLog(); }
+function removeSet(eidx, sidx) { activeWorkout.entries[eidx].sets.splice(sidx,1); saveActiveWorkout(); renderLog(); }
+function updateSet(eidx, sidx, field, val) { activeWorkout.entries[eidx].sets[sidx][field] = val; saveActiveWorkout(); }
 function stepWeight(eidx, sidx, delta) {
   var cur = parseFloat(activeWorkout.entries[eidx].sets[sidx].weight) || 0;
   var nw = Math.max(0, cur + delta);
   activeWorkout.entries[eidx].sets[sidx].weight = nw;
-  renderLog();
+  saveActiveWorkout(); renderLog();
 }
 
 function addExerciseModal() {
@@ -811,6 +862,7 @@ function addExFromModal(exId) {
     else defaultSets = [{reps:'',weight:''},{reps:'',weight:''},{reps:'',weight:''}];
   }
   activeWorkout.entries.push({exerciseId:exId, sets:defaultSets, collapsed:false});
+  saveActiveWorkout();
   closeModal();
   renderLog();
 }
